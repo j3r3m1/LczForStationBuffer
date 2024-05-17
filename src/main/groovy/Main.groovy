@@ -1,4 +1,9 @@
-package org.orbisgis.geoclimate.geoindicators
+// Add as comment in IntelliJ
+@GrabResolver(name='orbisgis', root='https://oss.sonatype.org/content/repositories/snapshots/')
+@Grab(group='org.orbisgis.geoclimate', module='geoclimate', version='1.0.1-SNAPSHOT')
+
+// Remove comment in IntelliJ
+//package org.orbisgis.geoclimate.geoindicators
 
 import org.orbisgis.data.jdbc.JdbcDataSource
 import static org.orbisgis.data.H2GIS.open
@@ -13,6 +18,9 @@ String outputPath = "/tmp/LCZ_FOR_STATION_BUFFER.fgb"
 // Directory where are saved the GeoClimate layers
 String geoclimate_dir = "/home/decide/Software/GeoClimate/osm_Pont-de-Veyle"
 
+// Name of the ID station column (the id should be an integer)
+String ID_station = "id_rsu"
+
 // Name of the file and table containing all unit with corresponding LCZ
 String outputTab = "LCZ_FIN"
 
@@ -23,9 +31,9 @@ input_params["indicatorUse"] = ["LCZ"]
 // Open an H2GIS connection
 h2GIS = open(File.createTempDir().toString() + File.separator + "myH2GIS_DB;AUTO_SERVER=TRUE")
 
-main(geoclimate_dir, h2GIS, input_params, outputTab, buffer_dir, outputPath)
+main(geoclimate_dir, h2GIS, input_params, outputTab, buffer_dir, outputPath, ID_station)
 
-static void main(String inputDir, JdbcDataSource h2GIS, Map input_params, String outputTab, File buffer_dir, String outputPath) {
+static void main(String inputDir, JdbcDataSource h2GIS, Map input_params, String outputTab, File buffer_dir, String outputPath, String ID_station) {
 
   // Load GeoClimate files into the Database
   String extension
@@ -49,6 +57,7 @@ static void main(String inputDir, JdbcDataSource h2GIS, Map input_params, String
   // Load the RSU (which are the buffer around station) into the database
   if (buffer_dir.exists()){
     h2GIS.load(buffer_dir.toString(), "rsu")
+    h2GIS """ALTER TABLE RSU RENAME COLUMN $ID_station TO id_rsu"""
   }
   else{
     println(buffer_dir.toString() + " do not exist")
@@ -59,9 +68,14 @@ static void main(String inputDir, JdbcDataSource h2GIS, Map input_params, String
   Map rsu_lcz_list = [:]
 
   // Run the calculation for each unit (buffer circle around station)
+  int i = 0
+  int n = h2GIS.firstRow ("SELECT COUNT(*) AS n FROM rsu")["n"]
   h2GIS.eachRow("SELECT * FROM rsu") {row ->
+    i++
     def rowMap = row.toRowResult()
     def id_rsu = rowMap."ID_RSU"
+
+    println("Calculate station $id_rsu ($i/$n)")
 
     // Need to delete the potential existing id_rsu in the building table
     h2GIS """DROP TABLE IF EXISTS building_tempo;
@@ -97,7 +111,8 @@ static void main(String inputDir, JdbcDataSource h2GIS, Map input_params, String
   // Union all LCZ
   h2GIS """DROP TABLE IF EXISTS $outputTab;
                       CREATE TABLE $outputTab
-                      AS ${queryFin.join(" UNION ALL ")}"""
+                      AS ${queryFin.join(" UNION ALL ")};
+                ALTER TABLE $outputTab RENAME COLUMN id_rsu TO $ID_station"""
 
   // Save results
   h2GIS.save(outputTab, outputPath)
