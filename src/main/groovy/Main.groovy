@@ -1,6 +1,6 @@
 // Add as comment in IntelliJ
-@GrabResolver(name='orbisgis', root='https://oss.sonatype.org/content/repositories/snapshots/')
-@Grab(group='org.orbisgis.geoclimate', module='geoclimate', version='1.0.1-SNAPSHOT')
+//@GrabResolver(name='orbisgis', root='https://oss.sonatype.org/content/repositories/snapshots/')
+//@Grab(group='org.orbisgis.geoclimate', module='geoclimate', version='1.0.1-SNAPSHOT')
 
 // Remove comment in IntelliJ
 //package org.orbisgis.geoclimate.geoindicators
@@ -10,13 +10,16 @@ import static org.orbisgis.data.H2GIS.open
 import org.orbisgis.geoclimate.Geoindicators
 
 // Path of the file containing the buffer geometries around stations
-File buffer_dir = new File("/home/decide/Software/GeoClimate/osm_Pont-de-Veyle/rsu.fgb")
+File buffer_dir = new File('/home/decide/Software/GeoClimate/osm_Pont-de-Veyle/rsu.fgb')
 
 // Path and name of the resulting file with LCZ type for each station buffer
-String outputPath = "/tmp/LCZ_FOR_STATION_BUFFER.fgb"
+String outputPath = '/tmp/LCZ_FOR_STATION_BUFFER.fgb'
 
 // Directory where are saved the GeoClimate layers
-String geoclimate_dir = "/home/decide/Software/GeoClimate/osm_Pont-de-Veyle"
+String geoclimate_dir = '/home/decide/Software/GeoClimate/osm_Pont-de-Veyle'
+
+// Name of the file format extension (for GeoClimate output files)
+String extension = ".fgb"
 
 // Name of the ID station column (the id should be an integer)
 String ID_station = "id_rsu"
@@ -31,22 +34,22 @@ input_params["indicatorUse"] = ["LCZ"]
 // Open an H2GIS connection
 h2GIS = open(File.createTempDir().toString() + File.separator + "myH2GIS_DB;AUTO_SERVER=TRUE")
 
-main(geoclimate_dir, h2GIS, input_params, outputTab, buffer_dir, outputPath, ID_station)
+main(geoclimate_dir, h2GIS, input_params, outputTab, buffer_dir, outputPath, ID_station, extension)
 
-static void main(String inputDir, JdbcDataSource h2GIS, Map input_params, String outputTab, File buffer_dir, String outputPath, String ID_station) {
-
+static void main(String inputDir, JdbcDataSource h2GIS, Map input_params, String outputTab, File buffer_dir,
+                 String outputPath, String ID_station, String extension) {
+  String extension_tmp
   // Load GeoClimate files into the Database
-  String extension
   for (l in ["zone", "rail", "road", "building", "vegetation",
              "water", "impervious", "sea_land_mask", "urban_areas",
              "building_height_missing"]){
     if (l == "building_height_missing"){
-      extension = ".csv"
+      extension_tmp = ".csv"
     }
     else{
-      extension = ".fgb"
+      extension_tmp = extension
     }
-    File filename = new File(inputDir + File.separator + l + extension)
+    File filename = new File(inputDir + File.separator + l + extension_tmp)
     if (filename.exists()){
       h2GIS.load(filename.toString(), l)
     }
